@@ -1,88 +1,92 @@
 # Vietnamese Handwriting OCR
 
-Dự án nhận dạng chữ viết tay tiếng Việt sử dụng Deep Learning.
+A Vietnamese handwritten character recognition system using Deep Learning.
 
-## Mô tả
+## Description
 
-Dự án này xây dựng một hệ thống OCR (Optical Character Recognition) chuyên biệt để nhận dạng chữ viết tay tiếng Việt. Sử dụng các mô hình Deep Learning hiện đại để đạt độ chính xác cao.
+This project builds a specialized OCR (Optical Character Recognition) system for recognizing Vietnamese handwritten text. It uses state-of-the-art Deep Learning models to achieve high accuracy in character recognition.
 
-## Cấu trúc Dự án
+## Project Structure
 
 ```
 vietnamese-handwriting-ocr/
 │
-├── src/                    # Thư mục chứa code chính
-│   ├── data/              # Xử lý dữ liệu
-│   ├── models/            # Định nghĩa mô hình
-│   ├── train/             # Huấn luyện mô hình
-│   ├── evaluate/          # Đánh giá mô hình
-│   └── inference/         # Dự đoán trên dữ liệu mới
+├── src/                    # Main source code directory
+│   ├── data/              # Data processing
+│   ├── models/            # Model definitions
+│   ├── train/             # Model training
+│   ├── evaluate/          # Model evaluation
+│   └── inference/         # Prediction on new data
 │
-├── app.py                 # Ứng dụng chính (Streamlit/Flask)
-├── train.py               # Script huấn luyện
-├── evaluate.py            # Script đánh giá
-├── config.py              # Cấu hình dự án
-├── requirements.txt       # Các thư viện phụ thuộc
+├── app.py                 # Main application (Streamlit/Flask)
+├── train.py               # Training script
+├── evaluate.py            # Evaluation script
+├── config.py              # Project configuration
+├── requirements.txt       # Project dependencies
 ├── .gitignore            # Git ignore file
-└── README.md             # Tài liệu này
+└── README.md             # This documentation
 ```
 
-## Yêu cầu
+## Requirements
 
 - Python 3.8+
-- pip hoặc conda
+- pip or conda
 
-## Cài đặt
+## Installation
 
-1. Clone repository:
+1. Clone the repository:
 ```bash
 git clone <repository-url>
 cd vietnamese-handwriting-ocr
 ```
 
-2. Tạo virtual environment:
+2. Create a virtual environment:
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Cài đặt các thư viện phụ thuộc:
+3. Install the required dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-## Sử dụng
+## Usage
 
-### Huấn luyện mô hình
+### Train the model
 ```bash
 python train.py
 ```
 
-### Đánh giá mô hình
+### Evaluate the model
 ```bash
 python evaluate.py
 ```
 
-### Chạy ứng dụng
+### Run the application
 ```bash
 python app.py
 ```
 
-## Dữ liệu
+## Data
 
-- Đặt dữ liệu huấn luyện vào `data/raw/`
-- Dữ liệu được xử lý sẽ được lưu vào `data/processed/`
+- Place training data in `data/raw/`
+- Processed data will be saved to `data/processed/`
 
-## Mô hình
+## Models
 
-- Mô hình được lưu trong thư mục `models/`
-- Chi tiết mô hình được định nghĩa trong `src/models/`
+- Models are saved in the `models/` directory
+- Model details are defined in `src/models/`
 
-## Kết quả
+## Results
 
-- Kết quả huấn luyện được lưu trong `logs/`
-- Kết quả đánh giá được lưu trong `results/`
+- Training results are saved in `logs/`
+- Evaluation results are saved in `results/`
 
-## Tác giả
+## Author
 
 Dang Nguyen Hoai
+
+## License
+
+[Choose an appropriate license, e.g., MIT]
