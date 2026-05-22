@@ -85,8 +85,4 @@ python app.py
 
 ## Tác giả
 
-[Tên của bạn]
-
-## License
-
-[Chọn license phù hợp, ví dụ: MIT]
+Dang Nguyen Hoai
