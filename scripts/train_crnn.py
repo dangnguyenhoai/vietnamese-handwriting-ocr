@@ -30,7 +30,6 @@ EPOCHS = 50
 LEARNING_RATE = 5e-4
 NUM_WORKERS = 2
 GRAD_CLIP = 5.0
-RESUME = False
 
 def train_one_epoch(model, loader, criterion, optimizer, device):
     model.train()
