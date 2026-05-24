@@ -13,6 +13,9 @@ vietnamese-handwriting-ocr/
 │
 ├── src/
 │   ├── data/
+│   │   ├── UIT_HWDB_line
+│   │   ├── UIT_HWDB_paragraph
+│   │   ├── UIT_HWDB_word
 │   │   ├── dataset.py
 │   │   ├── transforms.py
 │   │   ├── vocab.py
@@ -45,7 +48,8 @@ vietnamese-handwriting-ocr/
 │   └── export_model.py
 │
 ├── configs/
-│   └── crnn_base.yaml
+│   ├── crnn_base.example.yaml
+│   └── crnn_base.yaml       # Local config (git ignored)
 │
 ├── notebooks/
 │   └── eda_analysis.ipynb
