@@ -90,6 +90,110 @@ function toAssetUrl(path, apiBaseUrl) {
   return "";
 }
 
+function getClipboardImageFile(clipboardData) {
+  if (!clipboardData) {
+    return null;
+  }
+
+  const pastedFile = Array.from(clipboardData.files || []).find((file) =>
+    file.type.startsWith("image/"),
+  );
+
+  if (pastedFile) {
+    return pastedFile;
+  }
+
+  const imageItem = Array.from(clipboardData.items || []).find(
+    (item) => item.kind === "file" && item.type.startsWith("image/"),
+  );
+
+  return imageItem?.getAsFile() ?? null;
+}
+
+function withDefaultImageName(file, fallbackName = "pasted-image") {
+  if (file.name) {
+    return file;
+  }
+
+  const extension = file.type === "image/jpeg" ? "jpg" : "png";
+  return new File([file], `${fallbackName}.${extension}`, {
+    type: file.type || "image/png",
+    lastModified: Date.now(),
+  });
+}
+
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Cannot read this image. Please choose a browser-supported image file."));
+    };
+
+    image.src = objectUrl;
+  });
+}
+
+function canvasToJpegBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+
+        reject(new Error("Cannot convert image to JPEG."));
+      },
+      "image/jpeg",
+      0.92,
+    );
+  });
+}
+
+async function convertImageFileToJpeg(file) {
+  if (!file?.type?.startsWith("image/")) {
+    throw new Error("Selected file is not an image.");
+  }
+
+  const image = await loadImageFromFile(file);
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+
+  if (!width || !height) {
+    throw new Error("Cannot read image dimensions.");
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("This browser cannot convert images with canvas.");
+  }
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+
+  const blob = await canvasToJpegBlob(canvas);
+  const baseName = (file.name || "ocr-image").replace(/\.[^.]+$/, "");
+
+  return new File([blob], `${baseName}.jpg`, {
+    type: "image/jpeg",
+    lastModified: Date.now(),
+  });
+}
+
 function App() {
   const apiBaseUrl = useMemo(getApiBaseUrl, []);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -103,6 +207,29 @@ function App() {
   const [error, setError] = useState("");
 
   const selectedMode = OCR_MODES.find((mode) => mode.id === modeId) ?? OCR_MODES[0];
+
+  function setImageFile(file) {
+    setSelectedFile(file);
+    setResult(null);
+    setError("");
+  }
+
+  useEffect(() => {
+    function handlePaste(event) {
+      const imageFile = getClipboardImageFile(event.clipboardData);
+
+      if (!imageFile) {
+        return;
+      }
+
+      event.preventDefault();
+      setImageFile(withDefaultImageName(imageFile));
+    }
+
+    window.addEventListener("paste", handlePaste);
+
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
 
   useEffect(() => {
     if (!selectedFile) {
@@ -118,9 +245,7 @@ function App() {
 
   function handleFileChange(event) {
     const file = event.target.files?.[0] ?? null;
-    setSelectedFile(file);
-    setResult(null);
-    setError("");
+    setImageFile(file);
   }
 
   async function handlePredict(event) {
@@ -131,19 +256,20 @@ function App() {
       return;
     }
 
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    formData.append("auto_crop", String(selectedMode.autoCrop));
-    formData.append("crop_use", selectedMode.cropUse);
-    formData.append("pad_x", String(padX));
-    formData.append("pad_y", String(padY));
-    formData.append("dilate_iter", String(dilateIter));
-
     setIsLoading(true);
     setResult(null);
     setError("");
 
     try {
+      const uploadFile = await convertImageFileToJpeg(selectedFile);
+      const formData = new FormData();
+      formData.append("file", uploadFile);
+      formData.append("auto_crop", String(selectedMode.autoCrop));
+      formData.append("crop_use", selectedMode.cropUse);
+      formData.append("pad_x", String(padX));
+      formData.append("pad_y", String(padY));
+      formData.append("dilate_iter", String(dilateIter));
+
       const response = await fetch(`${apiBaseUrl}/predict/line`, {
         method: "POST",
         body: formData,
@@ -203,10 +329,10 @@ function App() {
                 onChange={handleFileChange}
               />
               <span className="file-drop-title">
-                {selectedFile ? selectedFile.name : "Choose or capture image"}
+                {selectedFile ? selectedFile.name : "Choose, capture, or paste image"}
               </span>
               <span className="file-drop-meta">
-                JPG, PNG, BMP, WebP
+                Ctrl+V supported. Images are sent as JPG.
               </span>
             </label>
 
