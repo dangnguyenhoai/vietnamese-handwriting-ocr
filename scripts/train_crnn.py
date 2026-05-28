@@ -51,30 +51,42 @@ def train_one_epoch(model, loader, criterion, optimizer, scheduler, scaler, devi
 
         optimizer.zero_grad(set_to_none=True)
 
+        # AMP chỉ dùng cho forward model.
+        # CTC loss nên tính bằng float32 cho ổn định.
         with torch.amp.autocast("cuda", enabled=use_amp):
             logits = model(images)
-            log_probs = logits.log_softmax(2)
-            input_lengths = model.get_output_lengths(image_widths)
 
-            loss = criterion(
-                log_probs,
-                labels,
-                input_lengths,
-                label_lengths
-            )
+        log_probs = logits.float().log_softmax(2)
+        input_lengths = model.get_output_lengths(image_widths)
+
+        loss = criterion(
+            log_probs,
+            labels,
+            input_lengths,
+            label_lengths
+        )
+
+        optimizer_was_run = True
 
         if use_amp:
+            old_scale = scaler.get_scale()
+
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
             scaler.step(optimizer)
             scaler.update()
+
+            new_scale = scaler.get_scale()
+
+            # Nếu scale giảm, GradScaler đã phát hiện overflow và skip optimizer.step()
+            optimizer_was_run = new_scale >= old_scale
         else:
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
             optimizer.step()
 
-        if scheduler is not None:
+        if scheduler is not None and optimizer_was_run:
             scheduler.step()
 
         total_loss += loss.item()
