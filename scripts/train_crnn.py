@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 
 from src.data.dataset import OCRLineDataset
 from src.data.collate import ocr_collate_fn
+from src.data.transforms import build_train_transform, build_val_transform
 from src.models.crnn_ctc import CRNNCTC
 from src.models.decoder import CTCGreedyDecoder
 from src.evaluate.metrics import compute_batch_metrics
@@ -26,7 +27,7 @@ RESUME_PATH = CHECKPOINT_DIR / "latest_crnn_ctc.pth"
 
 IMAGE_HEIGHT = 64
 BATCH_SIZE = 16
-EPOCHS = 200
+EPOCHS = 1
 LEARNING_RATE = 5e-4
 NUM_WORKERS = 2
 GRAD_CLIP = 5.0
@@ -184,13 +185,15 @@ def main():
     train_dataset = OCRLineDataset(
         samples_path=TRAIN_SAMPLES,
         char2idx_path=CHAR2IDX,
-        image_height=IMAGE_HEIGHT
+        image_height=IMAGE_HEIGHT,
+        transform=build_train_transform(),
     )
 
     val_dataset = OCRLineDataset(
         samples_path=VAL_SAMPLES,
         char2idx_path=CHAR2IDX,
-        image_height=IMAGE_HEIGHT
+        image_height=IMAGE_HEIGHT,
+        transform=build_val_transform(),
     )
 
     train_loader = DataLoader(
