@@ -31,14 +31,17 @@ EPOCHS = 1
 LEARNING_RATE = 5e-4
 NUM_WORKERS = 2
 GRAD_CLIP = 5.0
+USE_AMP = True
 EARLY_STOP_PATIENCE = 20
 EARLY_STOP_MIN_DELTA = 0.0
 
-def train_one_epoch(model, loader, criterion, optimizer, device):
+def train_one_epoch(model, loader, criterion, optimizer, scheduler, scaler, device):
     model.train()
 
     total_loss = 0.0
     total_batches = 0
+
+    use_amp = USE_AMP and device.type == "cuda"
 
     for batch_idx, batch in enumerate(loader):
         images = batch["images"].to(device)
@@ -46,30 +49,44 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
         label_lengths = batch["label_lengths"].to(device)
         image_widths = batch["image_widths"].to(device)
 
-        logits = model(images)
-        log_probs = logits.log_softmax(2)
+        optimizer.zero_grad(set_to_none=True)
 
-        input_lengths = model.get_output_lengths(image_widths)
+        with torch.amp.autocast("cuda", enabled=use_amp):
+            logits = model(images)
+            log_probs = logits.log_softmax(2)
+            input_lengths = model.get_output_lengths(image_widths)
 
-        loss = criterion(
-            log_probs,
-            labels,
-            input_lengths,
-            label_lengths
-        )
+            loss = criterion(
+                log_probs,
+                labels,
+                input_lengths,
+                label_lengths
+            )
 
-        optimizer.zero_grad()
-        loss.backward()
+        if use_amp:
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
+            optimizer.step()
 
-        torch.nn.utils.clip_grad_norm_(model.parameters(), GRAD_CLIP)
-
-        optimizer.step()
+        if scheduler is not None:
+            scheduler.step()
 
         total_loss += loss.item()
         total_batches += 1
 
         if (batch_idx + 1) % 20 == 0:
-            print(f"Batch {batch_idx + 1}/{len(loader)} - loss: {loss.item():.4f}")
+            current_lr = optimizer.param_groups[0]["lr"]
+            print(
+                f"Batch {batch_idx + 1}/{len(loader)} "
+                f"- loss: {loss.item():.4f} "
+                f"- lr: {current_lr:.6f}"
+            )
 
     return total_loss / max(total_batches, 1)
 
@@ -119,6 +136,8 @@ def evaluate(model, loader, criterion, decoder, device):
 def save_checkpoint(
     model,
     optimizer,
+    scheduler,
+    scaler,
     epoch,
     val_loss,
     val_metrics,
@@ -140,15 +159,23 @@ def save_checkpoint(
         "no_improve_epochs": no_improve_epochs,
         "early_stop_patience": EARLY_STOP_PATIENCE,
         "early_stop_min_delta": EARLY_STOP_MIN_DELTA,
+        "scheduler_state_dict": scheduler.state_dict() if scheduler is not None else None,
+        "scaler_state_dict": scaler.state_dict() if scaler is not None else None,
+        "use_amp": USE_AMP,
     }
 
     torch.save(checkpoint, path)
 
-def load_checkpoint(path, model, optimizer, device):
+def load_checkpoint(path, model, optimizer, scheduler, scaler, device):
     checkpoint = torch.load(path, map_location=device)
 
     model.load_state_dict(checkpoint["model_state_dict"])
-    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    
+    if scheduler is not None and checkpoint.get("scheduler_state_dict") is not None:
+        scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+
+    if scaler is not None and checkpoint.get("scaler_state_dict") is not None:
+        scaler.load_state_dict(checkpoint["scaler_state_dict"])
 
     start_epoch = checkpoint["epoch"] + 1
     best_val_cer = checkpoint.get("best_val_cer", float("inf"))
@@ -237,6 +264,17 @@ def main():
         weight_decay=1e-4
     )
 
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        optimizer,
+        max_lr=LEARNING_RATE,
+        epochs=EPOCHS,
+        steps_per_epoch=len(train_loader),
+        pct_start=0.1,
+        anneal_strategy="cos",
+    )
+
+    scaler = torch.amp.GradScaler("cuda", enabled=(USE_AMP and device.type == "cuda"))
+
     decoder = CTCGreedyDecoder(
         idx2char=idx2char,
         blank_idx=0
@@ -252,6 +290,8 @@ def main():
             path=RESUME_PATH,
             model=model,
             optimizer=optimizer,
+            scheduler=scheduler,
+            scaler=scaler,
             device=device
         )
 
@@ -267,6 +307,8 @@ def main():
             loader=train_loader,
             criterion=criterion,
             optimizer=optimizer,
+            scheduler=scheduler,
+            scaler=scaler,
             device=device
         )
 
@@ -321,6 +363,8 @@ def main():
             history=history,
             path=CHECKPOINT_DIR / "latest_crnn_ctc.pth",
             no_improve_epochs=no_improve_epochs,
+            scheduler=scheduler,
+            scaler=scaler,
         )
 
         print("Saved latest checkpoint.")
@@ -338,6 +382,8 @@ def main():
                 history=history,
                 path=CHECKPOINT_DIR / "best_crnn_ctc.pth",
                 no_improve_epochs=no_improve_epochs,
+                scheduler=scheduler,
+                scaler=scaler,
             )
 
             print("Saved best checkpoint.")
