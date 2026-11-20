@@ -1,5 +1,7 @@
 # Vietnamese Handwriting OCR
 
+> **Dataset access and usage:** The UIT-HWDB line images derived from HANDS-VNOnDB are **not distributed in this repository**. To request access to HANDS-VNOnDB, consult the official [Zenodo record](https://zenodo.org/records/23864366) and its application form. Under the stated Conditions of Use (Version 2.0), the data and derived material are restricted to non-commercial research and must not be redistributed. The local `src/data/UIT_HWDB_line/` path described below is only an expected input directory for users who have independently obtained the data with authorization. Do not commit or redistribute these data files.
+
 Hệ thống nhận dạng chữ viết tay tiếng Việt ở mức dòng ảnh, sử dụng mô hình **CRNN kết hợp CTC Loss**. Dự án bao gồm pipeline chuẩn bị dữ liệu, huấn luyện, đánh giá, dự đoán ảnh đơn, API FastAPI và giao diện web React/Vite.
 
 ## Tính năng chính
