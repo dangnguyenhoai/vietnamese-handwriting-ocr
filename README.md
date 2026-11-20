@@ -11,20 +11,49 @@ This project builds a specialized OCR (Optical Character Recognition) system for
 ```
 vietnamese-handwriting-ocr/
 │
-├── src/                    # Main source code directory
-│   ├── data/              # Data processing
-│   ├── models/            # Model definitions
-│   ├── train/             # Model training
-│   ├── evaluate/          # Model evaluation
-│   └── inference/         # Prediction on new data
+├── src/
+│   ├── data/
+│   │   ├── dataset.py
+│   │   ├── transforms.py
+│   │   ├── vocab.py
+│   │   └── collate.py
+│   │
+│   ├── models/
+│   │   ├── crnn_ctc.py
+│   │   └── decoder.py
+│   │
+│   ├── train/
+│   │   └── trainer.py
+│   │
+│   ├── evaluate/
+│   │   ├── metrics.py
+│   │   └── evaluate_line.py
+│   │
+│   ├── inference/
+│   │   ├── predict_line.py
+│   │   ├── line_segmenter.py
+│   │   └── predict_page.py
+│   │
+│   └── utils/
+│       ├── text_utils.py
+│       └── image_utils.py
 │
-├── app.py                 # Main application (Streamlit/Flask)
-├── train.py               # Training script
-├── evaluate.py            # Evaluation script
-├── config.py              # Project configuration
-├── requirements.txt       # Project dependencies
-├── .gitignore            # Git ignore file
-└── README.md             # This documentation
+├── scripts/
+│   ├── prepare_data.py
+│   ├── train_crnn.py
+│   ├── evaluate.py
+│   └── export_model.py
+│
+├── configs/
+│   └── crnn_base.yaml
+│
+├── notebooks/
+│   └── eda_analysis.ipynb
+│
+├── app.py
+├── requirements.txt
+├── README.md
+└── .gitignore
 ```
 
 ## Requirements
@@ -55,12 +84,12 @@ pip install -r requirements.txt
 
 ### Train the model
 ```bash
-python train.py
+python scripts/train_crnn.py
 ```
 
 ### Evaluate the model
 ```bash
-python evaluate.py
+python scripts/evaluate.py
 ```
 
 ### Run the application
