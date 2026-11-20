@@ -1,50 +1,52 @@
 # Vietnamese Handwriting OCR
 
-Hệ thống nhận dạng chữ viết tay tiếng Việt ở mức dòng ảnh, sử dụng mô hình CRNN kết hợp CTC Loss. Project bao gồm pipeline chuẩn bị dữ liệu, huấn luyện, đánh giá, dự đoán ảnh đơn, API FastAPI và giao diện web React/Vite.
+Hệ thống nhận dạng chữ viết tay tiếng Việt ở mức dòng ảnh, sử dụng mô hình **CRNN kết hợp CTC Loss**. Dự án bao gồm pipeline chuẩn bị dữ liệu, huấn luyện, đánh giá, dự đoán ảnh đơn, API FastAPI và giao diện web React/Vite.
 
 ## Tính năng chính
 
-- Chuẩn bị dữ liệu từ bộ `UIT_HWDB_line`, tách train/validation theo folder để giảm rò rỉ dữ liệu.
+- Chuẩn bị dữ liệu từ bộ `UIT_HWDB_line`, tách train/validation/test theo folder để hạn chế rò rỉ dữ liệu.
 - Lọc mẫu không hợp lệ với CTC dựa trên số timestep sau CNN.
 - Xây dựng bộ ký tự tiếng Việt và ánh xạ `char2idx`/`idx2char`.
 - Huấn luyện mô hình CRNN-CTC bằng PyTorch.
-- Đánh giá bằng CER, WER và Exact Match.
+- Đánh giá bằng các chỉ số CER, WER và Exact Match.
 - Dự đoán một ảnh dòng chữ với tùy chọn auto-crop.
 - Cung cấp REST API bằng FastAPI.
-- Cung cấp giao diện web bằng React/Vite để upload ảnh và xem kết quả OCR.
+- Cung cấp giao diện web React/Vite để upload ảnh và xem kết quả OCR.
+- Sinh biểu đồ trực quan hóa quá trình huấn luyện và kết quả đánh giá.
 
 ## Cấu trúc thư mục
 
 ```text
 vietnamese-handwriting-ocr/
-├── api/
-│   └── main.py                  # FastAPI OCR service
-├── scripts/
-│   ├── prepare_data.py           # Quét dữ liệu, tách train/val/test, tạo vocab
-│   ├── train_crnn.py             # Huấn luyện CRNN-CTC
-│   ├── evaluate.py               # Đánh giá checkpoint trên test set
-│   ├── predict_line.py           # Dự đoán một ảnh dòng chữ
-│   ├── crop_line_image.py        # Auto-crop ảnh dòng chữ
-│   ├── check_split.py            # Kiểm tra split dữ liệu
-│   └── find_ctc_invalid.py       # Tìm mẫu không hợp lệ với CTC
-├── src/
-│   ├── data/
-│   │   ├── dataset.py
-│   │   ├── collate.py
-│   │   ├── transforms.py
-│   │   └── UIT_HWDB_line/        # Dataset local
-│   ├── evaluate/
-│   │   └── metrics.py
-│   └── models/
-│       ├── crnn_ctc.py
-│       └── decoder.py
-├── web/
-│   ├── src/
-│   ├── package.json
-│   └── vite.config.js
-├── outputs/                      # Kết quả sinh ra khi chạy, không commit
-├── requirements.txt
-└── README.md
+|-- api/
+|   |-- main.py                     # FastAPI OCR service
+|   `-- __init__.py
+|-- scripts/
+|   |-- prepare_data.py             # Quét dữ liệu, tách train/val/test, tạo vocab
+|   |-- train_crnn.py               # Huấn luyện CRNN-CTC
+|   |-- evaluate.py                 # Đánh giá checkpoint trên test set
+|   |-- predict_line.py             # Dự đoán một ảnh dòng chữ
+|   |-- crop_line_image.py          # Auto-crop ảnh dòng chữ
+|   |-- check_split.py              # Kiểm tra split dữ liệu
+|   |-- find_ctc_invalid.py         # Tìm mẫu không hợp lệ với CTC
+|   `-- test_*.py                   # Một số script kiểm thử nhanh
+|-- src/
+|   |-- data/                       # Dataset, collate, transform
+|   |-- evaluate/                   # Metrics và hàm đánh giá
+|   |-- inference/                  # Logic dự đoán OCR
+|   |-- models/                     # CRNN-CTC và CTC decoder
+|   |-- train/                      # Trainer
+|   `-- utils/                      # Tiện ích xử lý ảnh/text
+|-- visualization/
+|   |-- visualization.py            # Sinh biểu đồ từ log/kết quả
+|   `-- figures/                    # Biểu đồ kết quả
+|-- web/
+|   |-- src/
+|   |-- package.json
+|   `-- vite.config.js
+|-- outputs/                        # Kết quả sinh ra khi chạy local
+|-- requirements.txt
+`-- README.md
 ```
 
 ## Yêu cầu
@@ -79,16 +81,16 @@ Pipeline hiện tại đọc dữ liệu tại:
 
 ```text
 src/data/UIT_HWDB_line/
-├── train_data/
-│   └── <folder_id>/
-│       ├── 1.jpg
-│       ├── 2.jpg
-│       └── label.json
-└── test_data/
-    └── <folder_id>/
-        ├── 1.jpg
-        ├── 2.jpg
-        └── label.json
+|-- train_data/
+|   `-- <folder_id>/
+|       |-- 1.jpg
+|       |-- 2.jpg
+|       `-- label.json
+`-- test_data/
+    `-- <folder_id>/
+        |-- 1.jpg
+        |-- 2.jpg
+        `-- label.json
 ```
 
 Mỗi file `label.json` là một object ánh xạ tên ảnh sang nội dung chữ viết tay:
@@ -108,7 +110,7 @@ Mỗi file `label.json` là một object ánh xạ tên ảnh sang nội dung ch
 python scripts/prepare_data.py
 ```
 
-Script này tạo các file trong `outputs/ocr_outputs/`, gồm:
+Script này tạo các file trong `outputs/ocr_outputs/`:
 
 - `train_samples.json`
 - `val_samples.json`
@@ -149,7 +151,7 @@ outputs/eval/test_results.json
 outputs/eval/test_predictions.json
 ```
 
-Kết quả chạy gần nhất trong project local:
+Kết quả test gần nhất trong project local:
 
 ```text
 Test CER         : 0.0781
@@ -177,6 +179,46 @@ python scripts/predict_line.py --image src/data/Real_line/1.jpg --crop-use gray
 ```
 
 Các lựa chọn `--crop-use` hiện có: `gray`, `bw`, `color`.
+
+## Kết quả và trực quan hóa
+
+Một số chỉ số từ quá trình huấn luyện gần nhất:
+
+| Chỉ số | Giá trị |
+| --- | ---: |
+| Số epoch đã chạy | 73 |
+| Train loss cuối | 0.0164 |
+| Validation loss cuối | 0.2854 |
+| Best validation loss | 0.2456 tại epoch 35 |
+| Best validation CER | 0.0416 tại epoch 53 |
+| Best validation WER | 0.1297 tại epoch 73 |
+| Best validation Exact Match | 0.2843 tại epoch 68 |
+| Thời gian huấn luyện | khoảng 108.27 phút |
+| Thời gian trung bình mỗi epoch | khoảng 88.99 giây |
+
+Các biểu đồ dưới đây được lấy từ `visualization/figures/`.
+
+### Tổng quan metrics
+
+![Tổng quan metrics trong quá trình huấn luyện](visualization/figures/metrics_overview.png)
+
+### Loss trong quá trình huấn luyện
+
+![Diễn biến loss trong quá trình huấn luyện](visualization/figures/loss_curve.png)
+
+### CER/WER trên validation
+
+![Diễn biến CER và WER trên tập validation](visualization/figures/cer_wer_curve.png)
+
+### So sánh validation và test
+
+![So sánh validation và test](visualization/figures/validation_test_comparison.png)
+
+Có thể sinh lại biểu đồ bằng lệnh:
+
+```powershell
+python visualization/visualization.py
+```
 
 ## Chạy API
 
@@ -222,7 +264,7 @@ Script `web/scripts/write-api-env.mjs` tự ghi `web/.env.local` với địa ch
 
 ## Ghi chú về file sinh ra
 
-Các thư mục/file như `outputs/`, checkpoint `.pth`, cache Python và virtual environment được ignore trong Git. Khi clone project mới, cần chạy lại bước chuẩn bị dữ liệu và huấn luyện hoặc tự đặt checkpoint/vocab đúng vị trí trước khi chạy API, web hoặc predict.
+Các thư mục/file như `outputs/`, checkpoint `.pth`, cache Python và virtual environment được ignore trong Git. Khi clone project mới, cần chạy lại bước chuẩn bị dữ liệu và huấn luyện, hoặc tự đặt checkpoint/vocab đúng vị trí trước khi chạy API, web hoặc predict.
 
 ## Tác giả
 
