@@ -1,6 +1,5 @@
 from pathlib import Path
 import json
-
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -9,13 +8,27 @@ from PIL import Image
 
 class OCRLineDataset(Dataset):
     """
-    Dataset cho bài toán nhận diện chữ viết tay tiếng Việt mức dòng.
+    Dataset cho OCR chữ viết tay tiếng Việt mức dòng.
+
+    Output:
+    - image: Tensor [1, H, W], normalized về [-1, 1]
+    - label: Tensor label đã encode
+    - label_length: độ dài label
+    - text: nhãn gốc
+    - image_path: đường dẫn ảnh
     """
 
-    def __init__(self, samples_path, char2idx_path, image_height=64):
+    def __init__(
+        self,
+        samples_path,
+        char2idx_path,
+        image_height=64,
+        transform=None,
+    ):
         self.samples_path = Path(samples_path)
         self.char2idx_path = Path(char2idx_path)
         self.image_height = image_height
+        self.transform = transform
 
         if not self.samples_path.exists():
             raise FileNotFoundError(f"Không tìm thấy samples file: {self.samples_path}")
@@ -38,10 +51,30 @@ class OCRLineDataset(Dataset):
         for ch in text:
             if ch not in self.char2idx:
                 raise KeyError(f"Ký tự không có trong char2idx: {repr(ch)}")
-
             encoded.append(self.char2idx[ch])
 
         return encoded
+
+    def resize_keep_ratio(self, image: Image.Image) -> Image.Image:
+        original_w, original_h = image.size
+
+        new_h = self.image_height
+        new_w = int(round(original_w * new_h / original_h))
+        new_w = max(1, new_w)
+
+        image = image.resize((new_w, new_h), Image.Resampling.BILINEAR)
+        return image
+
+    def pil_to_tensor(self, image: Image.Image) -> torch.Tensor:
+        image_np = np.array(image, dtype=np.float32)
+        image_np = image_np / 255.0
+
+        image_tensor = torch.from_numpy(image_np).unsqueeze(0)
+
+        # 0..1 -> -1..1
+        image_tensor = (image_tensor - 0.5) / 0.5
+
+        return image_tensor
 
     def load_image(self, image_path):
         image_path = Path(image_path)
@@ -49,29 +82,14 @@ class OCRLineDataset(Dataset):
         if not image_path.exists():
             raise FileNotFoundError(f"Không tìm thấy ảnh: {image_path}")
 
-        image = Image.open(image_path).convert("L")
+        with Image.open(image_path) as img:
+            image = img.convert("L")
 
-        original_w, original_h = image.size
+        if self.transform is not None:
+            image = self.transform(image)
 
-        new_h = self.image_height
-        new_w = int(original_w * new_h / original_h)
-
-        if new_w < 1:
-            new_w = 1
-
-        image = image.resize((new_w, new_h), Image.Resampling.BILINEAR)
-
-        # PIL image: [H, W], 0..255
-        image_np = np.array(image, dtype=np.float32)
-
-        # 0..255 -> 0..1
-        image_np = image_np / 255.0
-
-        # [H, W] -> [1, H, W]
-        image = torch.from_numpy(image_np).unsqueeze(0)
-
-        # 0..1 -> -1..1
-        image = (image - 0.5) / 0.5
+        image = self.resize_keep_ratio(image)
+        image = self.pil_to_tensor(image)
 
         return image
 
