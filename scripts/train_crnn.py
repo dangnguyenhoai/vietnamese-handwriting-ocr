@@ -21,11 +21,11 @@ TRAIN_SAMPLES = OUTPUT_DIR / "train_samples.json"
 VAL_SAMPLES = OUTPUT_DIR / "val_samples.json"
 CHAR2IDX = OUTPUT_DIR / "char2idx.json"
 IDX2CHAR = OUTPUT_DIR / "idx2char.json"
-RESUME = True
+RESUME = False
 RESUME_PATH = CHECKPOINT_DIR / "latest_crnn_ctc.pth"
 
 IMAGE_HEIGHT = 64
-BATCH_SIZE = 8
+BATCH_SIZE = 16
 EPOCHS = 200
 LEARNING_RATE = 5e-4
 NUM_WORKERS = 2
