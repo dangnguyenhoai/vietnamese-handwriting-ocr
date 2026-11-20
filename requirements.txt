@@ -1,0 +1,9 @@
+torch
+numpy
+pandas
+Pillow
+matplotlib
+tqdm
+jiwer
+opencv-python
+gradio

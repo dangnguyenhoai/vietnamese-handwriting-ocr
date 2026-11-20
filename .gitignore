@@ -2,158 +2,78 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-Pipfile.lock
-
-# PEP 582
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
+# Environments & Virtual Envs
 .env
-.venv
+.venv/
 env/
 venv/
 ENV/
-env.bak/
-venv.bak/
 
-# Spyder project settings
-.spyderproject
-.spyproject
+# Python / Pip / Packaging
+build/
+dist/
+*.egg-info/
+*.egg
+pip-log.txt
 
-# Rope project settings
-.ropeproject
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
 
-# mkdocs documentation
-/site
+# Jupyter Notebook
+.ipynb_checkpoints/
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# IDE
+# IDEs & Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# ML Models and Data
-models/*.h5
-models/*.pth
-models/*.pkl
-models/*.joblib
-data/raw/
-data/processed/
-data/train/
-data/test/
-data/val/
-*.weights
-*.model
-
-# Output files
-output/
-results/
-checkpoints/
-logs/
-*.csv
-*.xlsx
-
-# OS
+# OS Files
 .DS_Store
 Thumbs.db
 
-# Project specific
-*.tmp
+# Machine Learning: Data & Models
+data/
+checkpoints/
+logs/
+outputs/
+results/
+figures/
 temp/
+*.tmp
+
+# Large files, model weights & archives
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.pkl
+*.joblib
+*.weights
+*.zip
+*.tar.gz
+*.rar
+
+
+configs/*.yaml
+!configs/*.example.yaml
+
+outputs/
+checkpoints/
+logs/
+
+*.pth
+*.pt
+*.ckpt
+*.zip
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
