@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
 const OCR_MODES = [
   {
@@ -31,7 +32,20 @@ const OCR_MODES = [
 
 function getApiBaseUrl() {
   const envValue = import.meta.env.VITE_API_BASE_URL?.trim();
-  return (envValue || DEFAULT_API_BASE_URL).replace(/\/+$/, "");
+
+  if (envValue) {
+    return envValue.replace(/\/+$/, "");
+  }
+
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+
+    if (hostname && !LOCAL_HOSTNAMES.has(hostname)) {
+      return `http://${hostname}:8000`;
+    }
+  }
+
+  return DEFAULT_API_BASE_URL;
 }
 
 function getErrorMessage(error, fallback = "Request failed") {
