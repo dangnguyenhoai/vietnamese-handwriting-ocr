@@ -26,10 +26,12 @@ RESUME_PATH = CHECKPOINT_DIR / "latest_crnn_ctc.pth"
 
 IMAGE_HEIGHT = 64
 BATCH_SIZE = 8
-EPOCHS = 50
+EPOCHS = 200
 LEARNING_RATE = 5e-4
 NUM_WORKERS = 2
 GRAD_CLIP = 5.0
+EARLY_STOP_PATIENCE = 20
+EARLY_STOP_MIN_DELTA = 0.0
 
 def train_one_epoch(model, loader, criterion, optimizer, device):
     model.train()
@@ -113,7 +115,17 @@ def evaluate(model, loader, criterion, decoder, device):
     return avg_loss, metrics
 
 
-def save_checkpoint(model, optimizer, epoch, val_loss, val_metrics, best_val_cer, history, path):
+def save_checkpoint(
+    model,
+    optimizer,
+    epoch,
+    val_loss,
+    val_metrics,
+    best_val_cer,
+    history,
+    path,
+    no_improve_epochs=0,
+):
     path.parent.mkdir(parents=True, exist_ok=True)
 
     checkpoint = {
@@ -124,6 +136,9 @@ def save_checkpoint(model, optimizer, epoch, val_loss, val_metrics, best_val_cer
         "val_metrics": val_metrics,
         "best_val_cer": best_val_cer,
         "history": history,
+        "no_improve_epochs": no_improve_epochs,
+        "early_stop_patience": EARLY_STOP_PATIENCE,
+        "early_stop_min_delta": EARLY_STOP_MIN_DELTA,
     }
 
     torch.save(checkpoint, path)
@@ -137,12 +152,14 @@ def load_checkpoint(path, model, optimizer, device):
     start_epoch = checkpoint["epoch"] + 1
     best_val_cer = checkpoint.get("best_val_cer", float("inf"))
     history = checkpoint.get("history", [])
+    no_improve_epochs = checkpoint.get("no_improve_epochs", 0)
 
     print(f"Loaded checkpoint: {path}")
     print(f"Resume from epoch: {start_epoch}")
     print(f"Best Val CER so far: {best_val_cer}")
+    print(f"No-improve epochs so far: {no_improve_epochs}")
 
-    return start_epoch, best_val_cer, history
+    return start_epoch, best_val_cer, history, no_improve_epochs
 
 def main():
     print("=" * 80)
@@ -224,10 +241,11 @@ def main():
 
     history = []
     best_val_cer = float("inf")
+    no_improve_epochs = 0
     start_epoch = 1
 
     if RESUME and RESUME_PATH.exists():
-        start_epoch, best_val_cer, history = load_checkpoint(
+        start_epoch, best_val_cer, history, no_improve_epochs = load_checkpoint(
             path=RESUME_PATH,
             model=model,
             optimizer=optimizer,
@@ -281,10 +299,13 @@ def main():
         with open(LOG_DIR / "history.json", "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=2)
 
-        is_best = val_metrics["cer"] < best_val_cer
+        is_best = (best_val_cer - val_metrics["cer"]) > EARLY_STOP_MIN_DELTA
 
         if is_best:
             best_val_cer = val_metrics["cer"]
+            no_improve_epochs = 0
+        else:
+            no_improve_epochs += 1
 
         # Luôn lưu latest sau khi đã cập nhật best_val_cer
         save_checkpoint(
@@ -295,10 +316,12 @@ def main():
             val_metrics=val_metrics,
             best_val_cer=best_val_cer,
             history=history,
-            path=CHECKPOINT_DIR / "latest_crnn_ctc.pth"
+            path=CHECKPOINT_DIR / "latest_crnn_ctc.pth",
+            no_improve_epochs=no_improve_epochs,
         )
 
         print("Saved latest checkpoint.")
+        print(f"Early stop counter: {no_improve_epochs}/{EARLY_STOP_PATIENCE}")
 
         # Nếu epoch này tốt nhất thì lưu thêm best
         if is_best:
@@ -310,10 +333,18 @@ def main():
                 val_metrics=val_metrics,
                 best_val_cer=best_val_cer,
                 history=history,
-                path=CHECKPOINT_DIR / "best_crnn_ctc.pth"
+                path=CHECKPOINT_DIR / "best_crnn_ctc.pth",
+                no_improve_epochs=no_improve_epochs,
             )
 
             print("Saved best checkpoint.")
+
+        if no_improve_epochs >= EARLY_STOP_PATIENCE:
+            print(
+                "Early stopping triggered: "
+                f"Val CER did not improve for {EARLY_STOP_PATIENCE} epochs."
+            )
+            break
 
     print("\nTraining done.")
     print("Best Val CER:", best_val_cer)
