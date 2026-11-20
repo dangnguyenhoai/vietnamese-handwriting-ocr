@@ -7,3 +7,7 @@ tqdm
 jiwer
 opencv-python
 gradio
+fastapi
+uvicorn
+python-multipart
+requests
