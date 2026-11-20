@@ -170,7 +170,8 @@ def load_checkpoint(path, model, optimizer, scheduler, scaler, device):
     checkpoint = torch.load(path, map_location=device)
 
     model.load_state_dict(checkpoint["model_state_dict"])
-    
+    optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
     if scheduler is not None and checkpoint.get("scheduler_state_dict") is not None:
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
 
